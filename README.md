@@ -3,6 +3,8 @@
 面向政务工单 Excel 的本地脱敏工具，使用 Python、FastAPI 与 openpyxl 实现。通过浏览器完成文件导入、列映射、批量脱敏、效果对比、疑似残留复核和结果下载。
 
 
+
+
 ## 项目背景与目标
 
 工单的姓名、联系方式、证件号码和住址可能同时出现在独立字段与诉求、备注、答复等长文本中。人工逐项处理容易遗漏，也容易破坏业务描述。
@@ -120,7 +122,7 @@ py -3 -m venv .venv
 | `DesensitizationResult` | 批量处理行数、总命中、规则汇总、审计、扫描警告与耗时 |
 | `ColumnDetectResult` | 五类列映射的数据结构；当前 Excel/API 流程实际使用字典 |
 | `DesensitizationEngine` | 根据列配置执行 `process_row`、`process_batch`、`scan_completeness` |
-| `NameDictRule` | 用已知姓名字典匹配并掩码文本中的姓名 |
+| `NameDictRule` | 用姓名字典匹配并掩码文本中的姓名 |
 
 数据结构使用 Python `@dataclass` 自动生成初始化等方法，`field(default_factory=...)` 为审计对象生成时间。`str`、`list`、`dict`、`Optional[str]` 等类型注解表达参数和返回值意图；普通 Python 类型注解本身不执行所有运行时校验。`@app.get`、`@app.post` 等装饰器将函数注册为 HTTP 路由；`File(...)`、`Form(...)` 定义上传/表单字段，FastAPI 据此进行请求解析并生成接口文档。
 
@@ -180,6 +182,4 @@ print(result.masked_text)
 
 安装包请从本仓库 [GitHub Releases](https://github.com/LidiaJump/sensitive/releases) 获取。`.exe`、其他构建产物与压缩包不进入 Git 历史。首次 Release 使用标签 `v1.0.0`、标题“工单脱敏工具 v1.0.0”，本地现有资产文件名仍保留内部版本 `v1.2.0`。
 
-## 提交内容约束
 
-`.gitignore` 排除 `.env`、`node_modules/`、`*.tmp`、`*.log`、安装包、构建目录、缓存、原始/输出表格、任务数据、证书密钥及机器私有配置。忽略规则不会自动清除已跟踪文件；每次提交前仍需检查暂存文件列表。测试中的姓名、地区及证件地区码已经替换，生产程序的执行逻辑保持原样。
