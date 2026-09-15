@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>政务工单数据脱敏处理系统</title>
+<style>
+:root{
+  --canvas:#F4F5F7;
+  --panel:#FFFFFF;
+  --panel-2:#FAFBFC;
+  --ink:#1A1D24;
+  --muted:#6B7280;
+  --muted-2:#9CA3AF;
+  --line:#E2E5EA;
+  --line-2:#EEF0F3;
+  --accent:#2D5BFF;
+  --accent-dark:#1E42CC;
+  --accent-soft:#EEF1FF;
+  --accent-ink:#1A36B8;
+  --ok:#0E9F6E; --ok-ink:#0A6B4A; --ok-soft:#E6F7F0;
+  --warn:#D97706; --warn-ink:#8A4B04; --warn-soft:#FEF3E2;
+  --bad:#DC2626; --bad-ink:#991B1B; --bad-soft:#FEECEC;
+  --purple:#7C3AED; --purple-soft:#F3EEFF;
+  --cyan:#0891B2; --cyan-soft:#E6F6FA;
+  --r-shell:12px;
+  --r-card:8px;
+  --r-ctrl:6px;
+  --r-pill:999px;
+  --side:248px;
+  --shadow-card:0 1px 2px rgba(26,29,36,.04),0 4px 12px -2px rgba(26,29,36,.06);
+  --shadow-modal:0 12px 40px -8px rgba(26,29,36,.18),0 4px 12px -2px rgba(26,29,36,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--canvas);color:var(--ink);
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:"SF Mono","JetBrains Mono","Consolas","Courier New",monospace}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;min-height:28px}
+a{color:inherit;text-decoration:none}
+table{border-collapse:collapse;width:100%}
+svg{display:block;flex:none}
+.app{display:grid;grid-template-columns:var(--side) 1fr;min-height:100vh}
+
+/* ── 左侧步骤导航 ── */
+.side{background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.brand .logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  display:flex;align-items:center;justify-content:center;color:#fff}
+.brand .logo svg{width:18px;height:18px}
+.brand .title{font-weight:700;font-size:14.5px;line-height:1.3}
+.brand .subtitle{font-size:11px;color:var(--muted);margin-top:1px}
+.side-grp{font-size:11px;color:var(--muted-2);padding:16px 20px 6px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.step-nav{display:flex;flex-direction:column;gap:1px;padding:0 10px 10px}
+.step-item{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:var(--r-ctrl);
+  cursor:pointer;transition:background .15s;position:relative}
+.step-item:hover{background:var(--panel-2)}
+.step-item.active{background:var(--accent-soft)}
+.step-item.done .step-num{background:var(--ok);color:#fff;border-color:var(--ok)}
+.step-item.active .step-num{background:var(--accent);color:#fff;border-color:var(--accent)}
+.step-num{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+  color:var(--muted);background:var(--panel);flex:none;transition:all .2s}
+.step-num svg{width:14px;height:14px}
+.step-info{flex:1;min-width:0}
+.step-label{font-size:13px;font-weight:600;color:var(--ink)}
+.step-item.active .step-label{color:var(--accent-ink)}
+.step-desc{font-size:11px;color:var(--muted);margin-top:1px;line-height:1.4}
+.step-connector{position:absolute;left:23px;top:36px;width:2px;height:calc(100% - 26px);
+  background:var(--line);z-index:0}
+.step-item:last-child .step-connector{display:none}
+.step-item.done .step-connector{background:var(--ok)}
+
+.side-footer{margin-top:auto;padding:14px 20px;border-top:1px solid var(--line);font-size:11px;color:var(--muted-2)}
+.side-footer .badge-row{display:flex;gap:6px;margin-bottom:6px}
+.side-footer .mini-badge{padding:2px 8px;border-radius:var(--r-pill);font-size:10px;font-weight:600;
+  background:var(--ok-soft);color:var(--ok-ink)}
+
+/* ── 主区 ── */
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;gap:14px;padding:12px 28px;
+  border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:50}
+.topbar h1{font-size:16px;font-weight:700}
+.topbar .crumb{color:var(--muted);font-size:13px}
+.topbar .sp{margin-left:auto}
+.job-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--r-pill);
+  background:var(--panel-2);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.job-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.body{padding:24px 28px 40px;display:flex;flex-direction:column;gap:18px;min-width:0}
+
+/* ── 面板通用 ── */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);
+  overflow:hidden;box-shadow:var(--shadow-card)}
+.panel > header{display:flex;align-items:center;gap:10px;padding:14px 20px;
+  border-bottom:1px solid var(--line);font-weight:700;font-size:14.5px}
+.panel > header .icon-wrap{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;background:var(--accent-soft);color:var(--accent)}
+.panel > header .icon-wrap svg{width:16px;height:16px}
+.panel > header .sp{margin-left:auto}
+.panel > header .meta{font-size:12px;color:var(--muted);font-weight:400}
+.panel-body{padding:20px}
+
+/* ── 按钮 ── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;border-radius:var(--r-ctrl);
+  font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid transparent;
+  white-space:nowrap}
+.btn svg{width:15px;height:15px}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+.btn-primary:disabled{background:var(--line);color:var(--muted-2);border-color:var(--line);cursor:not-allowed}
+.btn-outline{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ghost{background:transparent;color:var(--muted)}
+.btn-ghost:hover{color:var(--ink);background:var(--panel-2)}
+.btn-success{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn-success:hover{filter:brightness(.95)}
+.btn-warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-lg{padding:11px 28px;font-size:15px}
+
+/* ── KPI 指标 ── */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.bad::before{background:var(--bad)}
+.kpi .k{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+.kpi .k svg{width:13px;height:13px}
+.kpi .v{font-size:28px;font-weight:700;margin-top:6px;line-height:1.2;display:flex;align-items:baseline;gap:5px}
+.kpi .v em{font-size:13px;font-weight:400;color:var(--muted);font-style:normal}
+.kpi .sub{font-size:11.5px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:5px}
+
+/* ── 上传区 ── */
+.upload-zone{border:2px dashed var(--line);border-radius:var(--r-card);padding:52px 24px;
+  text-align:center;transition:all .2s;cursor:pointer;background:var(--panel-2)}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-soft)}
+.upload-zone .up-icon{width:56px;height:56px;border-radius:14px;background:var(--accent-soft);
+  color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.upload-zone .up-icon svg{width:28px;height:28px}
+.upload-zone .up-text{font-size:16px;font-weight:600;margin-bottom:4px}
+.upload-zone .up-hint{font-size:12.5px;color:var(--muted)}
+.upload-zone .up-formats{display:flex;gap:8px;justify-content:center;margin-top:14px}
+.upload-zone .fmt-chip{padding:3px 10px;border-radius:var(--r-pill);font-size:11px;font-weight:600;
+  background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.upload-zone input{display:none}
+
+.file-card{display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:var(--r-card);margin-top:16px}
+.file-card .file-ic{width:44px;height:44px;border-radius:10px;background:var(--ok-soft);color:var(--ok);
+  display:flex;align-items:center;justify-content:center;flex:none}
+.file-card .file-ic svg{width:22px;height:22px}
+.file-card .file-info{flex:1;min-width:0}
+.file-card .file-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-card .file-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.file-card .file-stats{display:flex;gap:20px}
+.file-card .stat-item{text-align:center}
+.file-card .stat-item .sv{font-size:18px;font-weight:700;color:var(--accent)}
+.file-card .stat-item .sl{font-size:11px;color:var(--muted)}
+
+/* ── 模板栏 ── */
+.template-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.template-bar select{padding:7px 12px;border:1px solid var(--line);border-radius:var(--r-ctrl);
+  font-size:13px;background:var(--panel);min-width:220px;color:var(--ink);cursor:pointer}
+.template-bar select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.template-bar .hint{font-size:12px;color:var(--muted)}
+
+/* ── 列统计摘要 ── */
+.col-summary{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.col-summary .cs-item{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;
+  border-radius:var(--r-pill);font-size:12px;font-weight:600;background:var(--panel-2);border:1px solid var(--line)}
+.cs-item .cs-dot{width:7px;height:7px;border-radius:50%}
+.cs-name{color:var(--ink)} .cs-name .cs-dot{background:var(--accent)}
+.cs-phone{color:var(--ink)} .cs-phone .cs-dot{background:var(--accent)}
+.cs-id{color:var(--ink)} .cs-id .cs-dot{background:var(--accent)}
+.cs-addr{color:var(--ink)} .cs-addr .cs-dot{background:var(--accent)}
+.cs-text{color:var(--ink)} .cs-text .cs-dot{background:var(--accent)}
+.cs-skip{color:var(--ink)} .cs-skip .cs-dot{background:var(--muted-2)}
+
+/* ── 列配置表格 ── */
+.col-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-ctrl);max-height:420px;overflow-y:auto}
+.col-table{width:100%;border-collapse:collapse;font-size:13px}
+.col-table th{background:var(--panel-2);padding:10px 16px;text-align:left;font-weight:600;
+  color:var(--ink);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;white-space:nowrap;font-size:12.5px}
+.col-table td{padding:10px 16px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.col-table tbody tr:last-child td{border-bottom:0}
+.col-table tbody tr:hover{background:var(--accent-soft)}
+.col-table .col-name{font-weight:600;white-space:nowrap;font-size:13px}
+.col-table .col-sample{color:var(--muted);font-size:12px;max-width:280px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;font-family:"SF Mono","Consolas",monospace}
+.col-types{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.col-types label{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;
+  white-space:nowrap;padding:2px 6px;border-radius:4px;font-weight:500}
+.col-types label:hover{background:var(--panel-2)}
+.col-types input{accent-color:var(--accent);cursor:pointer;width:13px;height:13px}
+.cb-skip{color:var(--ink)}
+.cb-name{color:var(--ink)}
+.cb-phone{color:var(--ink)}
+.cb-id{color:var(--ink)}
+.cb-addr{color:var(--ink)}
+.cb-text{color:var(--ink)}
+
+/* ── 规则开关 ── */
+.rules-section{margin-top:18px;padding-top:18px;border-top:1px solid var(--line-2)}
+.rules-section .rs-title{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.rules-section .rs-title svg{width:14px;height:14px;color:var(--accent)}
+.rules-row{display:flex;gap:10px;flex-wrap:wrap}
+.rule-toggle{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:var(--r-ctrl);
+  background:var(--panel-2);border:1px solid var(--line);font-size:12.5px;cursor:pointer;
+  transition:all .15s;font-weight:500}
+.rule-toggle:hover{border-color:var(--muted-2)}
+.rule-toggle.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+.rule-toggle .sw{width:30px;height:16px;border-radius:8px;background:var(--line);position:relative;transition:background .2s;flex:none}
+.rule-toggle .sw::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;
+  background:#fff;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.rule-toggle.active .sw{background:var(--accent)}
+.rule-toggle.active .sw::after{transform:translateX(14px)}
+
+/* ── 处理进度 / 引擎流水线 ── */
+.engine-flow{display:flex;flex-direction:column;gap:0}
+.flow-stage{display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid var(--line-2);align-items:flex-start}
+.flow-stage:last-child{border-bottom:0}
+.flow-stage .stage-ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;flex:none;font-weight:700;font-size:14px}
+.flow-stage .stage-ic svg{width:18px;height:18px}
+.stage-structured .stage-ic{background:var(--accent-soft);color:var(--accent)}
+.stage-address .stage-ic{background:var(--warn-soft);color:var(--warn)}
+.stage-text .stage-ic{background:var(--ok-soft);color:var(--ok)}
+.stage-scan .stage-ic{background:var(--purple-soft);color:var(--purple)}
+.flow-stage .stage-content{flex:1;min-width:0}
+.flow-stage .stage-title{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.flow-stage .stage-desc{font-size:12px;color:var(--muted);margin-top:3px}
+.rule-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.rule-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--r-pill);
+  font-size:11px;font-weight:600;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.rule-chip.done{background:var(--ok-soft);border-color:transparent;color:var(--ok-ink)}
+.rule-chip .rc-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+.progress-bar-wrap{margin:20px 0}
+.progress-bar{height:8px;border-radius:4px;background:var(--line-2);overflow:hidden}
+.progress-bar .fill{height:100%;background:var(--accent);border-radius:4px;transition:width .4s ease;opacity:.75}
+.progress-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--muted);align-items:center}
+.progress-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+.progress-spinner.hidden{display:none}
+.uploading-state{display:flex;flex-direction:column;align-items:center;gap:12px;color:var(--muted);font-size:14px;font-weight:600;padding:24px 0}
+.uploading-state .progress-spinner{width:28px;height:28px;border-width:3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Tab 切换 ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);padding:0 20px}
+.tab{padding:12px 20px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:6px}
+.tab svg{width:15px;height:15px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .tab-count{padding:1px 7px;border-radius:var(--r-pill);font-size:10.5px;font-weight:700;
+  background:var(--panel-2);color:var(--muted)}
+.tab.active .tab-count{background:var(--accent-soft);color:var(--accent)}
+
+/* ── 数据预览 diff 表格 ── */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-ctrl)}
+.diff-table{width:100%;border-collapse:collapse;font-size:13px}
+.diff-table th{background:var(--panel-2);padding:10px 14px;text-align:left;font-weight:600;
+  color:var(--ink);border-bottom:1px solid var(--line);white-space:nowrap;font-size:12.5px;position:sticky;top:0}
+.diff-table td{padding:10px 14px;border-bottom:1px solid var(--line-2);vertical-align:top;
+  max-width:320px;overflow:hidden;text-overflow:ellipsis}
+.diff-table tbody tr:last-child td{border-bottom:0}
+.diff-table tbody tr:hover{background:var(--panel-2)}
+.diff-old{color:var(--bad);text-decoration:line-through;opacity:.65;font-size:12px}
+.diff-new{color:var(--ok-ink);font-weight:600;font-size:12.5px}
+.row-idx{color:var(--muted);font-weight:600;font-size:12px;white-space:nowrap}
+
+/* ── 审计面板 ── */
+.audit-layout{display:grid;grid-template-columns:280px 1fr;gap:0;min-height:400px}
+.audit-sidebar{border-right:1px solid var(--line);padding:16px}
+.audit-sidebar .as-title{font-size:11px;color:var(--muted-2);font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:10px}
+.rule-filter-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-ctrl);
+  cursor:pointer;font-size:12.5px;transition:background .15s;margin-bottom:2px}
+.rule-filter-item:hover{background:var(--panel-2)}
+.rule-filter-item.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.rule-filter-item .rf-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.rule-filter-item .rf-count{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600}
+.rule-filter-item.active .rf-count{color:var(--accent)}
+
+.audit-list{padding:8px 0;max-height:480px;overflow-y:auto}
+.audit-entry{padding:12px 20px;border-bottom:1px solid var(--line-2);transition:background .15s}
+.audit-entry:hover{background:var(--panel-2)}
+.audit-entry:last-child{border-bottom:0}
+.audit-meta{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.audit-meta .am-row{font-weight:700;font-size:12.5px;color:var(--ink)}
+.audit-meta .am-col{font-size:12px;color:var(--muted)}
+.audit-meta .am-rule{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  border-radius:var(--r-pill);font-size:10.5px;font-weight:700}
+.audit-detail{display:flex;align-items:center;gap:10px;font-size:12.5px;flex-wrap:wrap;margin-top:4px}
+.audit-detail .pii-old{color:var(--bad);font-family:"SF Mono","Consolas",monospace;font-size:12px;
+  background:var(--bad-soft);padding:2px 8px;border-radius:4px;text-decoration:line-through}
+.audit-detail .pii-new{color:var(--ok-ink);font-family:"SF Mono","Consolas",monospace;font-size:12px;
+  background:var(--ok-soft);padding:2px 8px;border-radius:4px;font-weight:600}
+.audit-detail .pii-arrow{color:var(--muted-2)}
+
+/* ── 完整性扫描 / 疑似项 ── */
+.scan-panel{border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden;margin-bottom:18px}
+.scan-header{display:flex;align-items:center;gap:10px;padding:14px 20px;font-weight:700;font-size:14px}
+.scan-header.passed{background:var(--ok-soft);color:var(--ok-ink)}
+.scan-header.warning{background:var(--warn-soft);color:var(--warn-ink)}
+.scan-header svg{width:18px;height:18px}
+.scan-header .sp{margin-left:auto}
+.scan-header .scan-count{font-size:12px;font-weight:600}
+.scan-toolbar{display:flex;align-items:center;gap:12px;padding:10px 20px;
+  border-bottom:1px solid var(--line);background:var(--panel-2);flex-wrap:wrap}
+.scan-toolbar label{font-size:12.5px;display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500}
+.scan-toolbar input{accent-color:var(--warn);cursor:pointer}
+.scan-list{max-height:340px;overflow-y:auto}
+.sus-item{display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line-2)}
+.sus-item:last-child{border-bottom:0}
+.sus-item:hover{background:var(--warn-soft)}
+.sus-item input{margin-top:4px;accent-color:var(--warn);cursor:pointer;width:15px;height:15px;flex:none}
+.sus-meta{flex:0 0 200px;min-width:0}
+.sus-where{font-weight:700;font-size:12.5px;color:var(--warn-ink)}
+.sus-type{font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px}
+.sus-type .st-dot{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.sus-frag{flex:1;font-family:"SF Mono","Consolas",monospace;font-size:12px;background:var(--warn-soft);
+  border-radius:4px;padding:6px 10px;color:var(--warn-ink);word-break:break-all;font-weight:600}
+.sus-ctx{flex:1;font-size:11.5px;color:var(--muted);word-break:break-all;line-height:1.5}
+
+/* ── 下载区 ── */
+.download-hero{text-align:center;padding:40px 20px}
+.download-hero .dh-icon{width:72px;height:72px;border-radius:18px;background:var(--ok-soft);
+  color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.download-hero .dh-icon svg{width:36px;height:36px}
+.download-hero .dh-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.download-hero .dh-desc{font-size:13.5px;color:var(--muted);margin-bottom:24px}
+.download-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:600px;margin:0 auto 28px}
+.ds-item{padding:14px;background:var(--panel-2);border-radius:var(--r-ctrl);border:1px solid var(--line)}
+.ds-item .ds-v{font-size:22px;font-weight:700;color:var(--accent)}
+.ds-item .ds-l{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+/* ── 状态标签 ── */
+.tag{display:inline-block;padding:2px 9px;border-radius:var(--r-pill);font-size:11.5px;font-weight:600}
+.tag.ok{background:var(--ok-soft);color:var(--ok-ink)}
+.tag.warn{background:var(--warn-soft);color:var(--warn-ink)}
+.tag.bad{background:var(--bad-soft);color:var(--bad-ink)}
+.tag.info{background:var(--accent-soft);color:var(--accent-ink)}
+.tag.muted{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+
+/* ── 四种状态 ── */
+[data-state]{display:none}
+[data-state].on{display:block}
+
+/* ── 弹窗 ── */
+.scrim{position:fixed;inset:0;background:rgba(26,29,36,.42);opacity:0;
+  pointer-events:none;transition:opacity .18s;z-index:200}
+.scrim.on{opacity:1;pointer-events:auto}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%);z-index:201;
+  width:min(480px,92vw);background:var(--panel);border-radius:var(--r-shell);padding:24px;
+  opacity:0;pointer-events:none;transition:.18s;box-shadow:var(--shadow-modal)}
+.modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal .modal-desc{font-size:13px;color:var(--muted);margin-bottom:16px}
+.modal input[type="text"]{width:100%;padding:10px 14px;border:1px solid var(--line);
+  border-radius:var(--r-ctrl);font-size:13.5px;margin-bottom:16px;background:var(--panel)}
+.modal input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+
+/* ── Toast ── */
+.toast{position:fixed;top:20px;right:20px;z-index:300;background:var(--ink);color:#fff;
+  padding:12px 20px;border-radius:var(--r-ctrl);font-size:13px;font-weight:500;
+  box-shadow:var(--shadow-modal);opacity:0;transform:translateY(-10px);transition:all .25s;
+  display:flex;align-items:center;gap:8px}
+.toast.on{opacity:1;transform:translateY(0)}
+.toast svg{width:16px;height:16px;color:var(--ok)}
+.toast.error svg{color:var(--bad)}
+
+/* ── 操作栏 ── */
+.action-bar{display:flex;gap:10px;align-items:center;margin-top:20px;padding-top:18px;border-top:1px solid var(--line-2)}
+.action-bar .sp{margin-left:auto}
+
+/* ── 规则命中分布条形图 ── */
+.hit-bars{display:flex;flex-direction:column;gap:8px}
+.hit-bar-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.hit-bar-row .hbr-label{width:140px;flex:none;color:var(--muted);font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hit-bar-row .hbr-track{flex:1;height:20px;background:var(--panel-2);border-radius:4px;overflow:hidden;position:relative}
+.hit-bar-row .hbr-fill{height:100%;border-radius:4px;transition:width .4s}
+.hit-bar-row .hbr-val{width:50px;flex:none;text-align:right;font-weight:700;font-size:12px}
+
+.hidden{display:none !important}
+
+@media (max-width:1180px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .audit-layout{grid-template-columns:1fr}
+  .audit-sidebar{border-right:0;border-bottom:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 左侧步骤导航 -->
+  <nav class="side">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.27,47,25.53a8,8,0,0,0,4.2,0c1-.26,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.3,48,112l0-56,160,0Z"/></svg>
+      </div>
+      <div>
+        <div class="title">工单脱敏系统</div>
+        <div class="subtitle">政务数据 · 可审计 · 本地运行</div>
+      </div>
+    </div>
+    <div class="side-grp">处理流程</div>
+    <div class="step-nav" id="stepNav">
+      <div class="step-item active" data-step="1" onclick="goStep(1)">
+        <div class="step-connector"></div>
+        <div class="step-num">1</div>
+        <div class="step-info">
+          <div class="step-label">上传文件</div>
+          <div class="step-desc">导入工单 Excel</div>
+        </div>
+      </div>
+      <div class="step-item" data-step="2" onclick="goStep(2)">
+        <div class="step-connector"></div>
+        <div class="step-num">2</div>
+        <div class="step-info">
+          <div class="step-label">列映射配置</div>
+          <div class="step-desc">识别列类型 · 规则开关</div>
+        </div>
+      </div>
+      <div class="step-item" data-step="3" onclick="goStep(3)">
+        <div class="step-connector"></div>
+        <div class="step-num">3</div>
+        <div class="step-info">
+          <div class="step-label">脱敏执行</div>
+          <div class="step-desc">多规则引擎流水线</div>
+        </div>
+      </div>
+      <div class="step-item" data-step="4" onclick="goStep(4)">
+        <div class="step-connector"></div>
+        <div class="step-num">4</div>
+        <div class="step-info">
+          <div class="step-label">预览与审计</div>
+          <div class="step-desc">Diff对比 · 审计日志</div>
+        </div>
+      </div>
+      <div class="step-item" data-step="5" onclick="goStep(5)">
+        <div class="step-num">5</div>
+        <div class="step-info">
+          <div class="step-label">下载结果</div>
+          <div class="step-desc">导出脱敏文件</div>
+        </div>
+      </div>
+    </div>
+    <div class="side-footer">
+      <div class="badge-row">
+        <span class="mini-badge">本地运行</span>
+        <span class="mini-badge">v1.2.0</span>
+      </div>
+      <div>任务 ID: <span class="mono" id="jobIdDisplay">—</span></div>
+    </div>
+  </nav>
+
+  <!-- 主区 -->
+  <div class="main">
+    <header class="topbar">
+      <span class="crumb">数据处理 /</span>
+      <h1 id="pageTitle">上传工单文件</h1>
+      <span class="sp"></span>
+      <button class="btn btn-outline btn-sm" onclick="resetAll()">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88v40a8,8,0,0,0,8,8h48Z"/><path d="M144,120H120V104a8,8,0,0,0-16,0v16H88a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V136h24a8,8,0,0,0,0-16Z"/></svg>
+        处理新文件
+      </button>
+    </header>
+
+    <div class="body">
+      <!-- Step 1: 上传 -->
+      <section data-state="step1" class="on">
+        <div class="panel">
+          <header>
+            <div class="icon-wrap"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></svg></div>
+            上传工单 Excel
+            <span class="sp"></span>
+            <span class="meta">支持 .xlsx / .xls</span>
+          </header>
+          <div class="panel-body">
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+              <div class="up-icon"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></svg></div>
+              <div class="up-text">点击或拖拽文件到此处上传</div>
+              <div class="up-hint">系统将自动识别列名并预览首行样例数据</div>
+              <div class="up-formats">
+                <span class="fmt-chip">.xlsx</span>
+                <span class="fmt-chip">.xls</span>
+                <span class="fmt-chip">最大 50MB</span>
+              </div>
+              <div class="uploading-state hidden" id="uploadingState">
+                <span class="progress-spinner"></span>
+                <div>正在上传，请稍候...</div>
+              </div>
+              <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+            </div>
+            <div id="fileCard" class="hidden">
+              <div class="file-card">
+                <div class="file-ic"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z"/></svg></div>
+                <div class="file-info">
+                  <div class="file-name" id="fileName">—</div>
+                  <div class="file-meta">上传成功 · <span id="fileTime">—</span></div>
+                </div>
+                <div class="file-stats">
+                  <div class="stat-item"><div class="sv num" id="statRows">0</div><div class="sl">数据行</div></div>
+                  <div class="stat-item"><div class="sv num" id="statCols">0</div><div class="sl">列</div></div>
+                  <div class="stat-item"><div class="sv num" id="statSize">—</div><div class="sl">大小</div></div>
+                </div>
+              </div>
+              <div class="action-bar">
+                <button class="btn btn-outline btn-sm" onclick="resetAll()">重新选择</button>
+                <span class="sp"></span>
+                <button class="btn btn-primary" onclick="goStep(2)">
+                  下一步
+                  <svg viewBox="0 0 256 256" fill="currentColor"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: 列映射配置 -->
+      <section data-state="step2">
+        <div class="panel">
+          <header>
+            <div class="icon-wrap"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M104,32H64A16,16,0,0,0,48,48V208a16,16,0,0,0,16,16h40a16,16,0,0,0,16-16V48A16,16,0,0,0,104,32Zm0,176H64V48h40ZM192,32H152a16,16,0,0,0-16,16V208a16,16,0,0,0,16,16h40a16,16,0,0,0,16-16V48A16,16,0,0,0,192,32Zm0,176H152V48h40Z"/></svg></div>
+            列映射配置
+            <span class="sp"></span>
+            <span class="meta" id="colMeta">系统已自动识别列类型</span>
+          </header>
+          <div class="panel-body">
+            <div class="template-bar">
+              <button class="btn btn-outline btn-sm" onclick="resetToAutoDetect()">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></svg>
+                选择自动脱敏
+              </button>
+              <select id="templateSelect" onchange="applyTemplate(this.value)">
+                <option value="">— 选择其他脱敏模板 —</option>
+              </select>
+              <button class="btn btn-outline btn-sm" onclick="openSaveTemplateModal()">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"/></svg>
+                保存本次选择为模板
+              </button>
+              <span class="hint" id="templateHint"></span>
+            </div>
+
+            <div class="col-summary" id="colSummary"></div>
+
+            <div class="col-table-wrap">
+              <table class="col-table">
+                <thead><tr><th style="width:16%">列名</th><th style="width:32%">样例数据</th><th>列类型（可多选）</th></tr></thead>
+                <tbody id="colTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="rules-section">
+              <div class="rs-title">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM64,128a12,12,0,1,1,12,12A12,12,0,0,1,64,128Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,116,128Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,168,128Z"/></svg>
+                启用脱敏规则
+              </div>
+              <div class="rules-row" id="rulesRow">
+                <div class="rule-toggle active" data-rule="enable_id_card" onclick="toggleRule(this)"><span class="sw"></span>身份证号</div>
+                <div class="rule-toggle active" data-rule="enable_phone" onclick="toggleRule(this)"><span class="sw"></span>手机号</div>
+                <div class="rule-toggle active" data-rule="enable_name" onclick="toggleRule(this)"><span class="sw"></span>姓名字典</div>
+                <div class="rule-toggle active" data-rule="enable_salutation" onclick="toggleRule(this)"><span class="sw"></span>称谓</div>
+                <div class="rule-toggle active" data-rule="enable_address" onclick="toggleRule(this)"><span class="sw"></span>地址门牌号</div>
+              </div>
+            </div>
+
+            <div class="action-bar">
+              <button class="btn btn-outline" onclick="goStep(1)">上一步</button>
+              <span class="sp"></span>
+              <button class="btn btn-primary btn-lg" onclick="startDesensitize()">
+                <svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128ZM112,88v80a8,8,0,0,0,12.25,6.78l56-40a8,8,0,0,0,0-13.56l-56-40A8,8,0,0,0,112,88Z"/></svg>
+                开始脱敏处理
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: 脱敏执行 -->
+      <section data-state="step3">
+        <div class="panel">
+          <header>
+            <div class="icon-wrap"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM136,80v46.34l32.49,18.76a8,8,0,0,1-8,13.8l-36.49-21.05A8,8,0,0,1,120,140V80a8,8,0,0,1,16,0Z"/></svg></div>
+            脱敏引擎执行中
+            <span class="sp"></span>
+            <span class="meta" id="engineProgressText">准备中...</span>
+          </header>
+          <div class="panel-body">
+            <div class="progress-bar-wrap">
+              <div class="progress-bar"><div class="fill" id="engineProgressBar" style="width:0%"></div></div>
+              <div class="progress-meta">
+                <span>已处理 <b class="num" id="processedRows">0</b> 行</span>
+                <span><span class="progress-spinner" id="progressSpinner"></span><span id="etaText">0%</span></span>
+              </div>
+            </div>
+
+            <div class="engine-flow" id="engineFlow">
+              <div class="flow-stage stage-structured">
+                <div class="stage-ic"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/></svg></div>
+                <div class="stage-content">
+                  <div class="stage-title">结构化列处理 <span class="tag ok" id="stage1Tag">等待中</span></div>
+                  <div class="stage-desc">姓名 / 电话 / 身份证字段直接脱敏，1:1 映射</div>
+                </div>
+              </div>
+              <div class="flow-stage stage-address">
+                <div class="stage-ic"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"/></svg></div>
+                <div class="stage-content">
+                  <div class="stage-title">私人信息脱敏 <span class="tag muted" id="stage2Tag">等待中</span></div>
+                  <div class="stage-desc">地址门牌号 + 身份证/手机号等私人信息扫描脱敏</div>
+                </div>
+              </div>
+              <div class="flow-stage stage-text">
+                <div class="stage-ic"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M178.48,115.7A44,44,0,0,0,148,40H80a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8h80a48,48,0,0,0,18.48-92.3ZM88,56h60a28,28,0,0,1,0,56H88Zm72,136H88V128h72a32,32,0,0,1,0,64Z"/></svg></div>
+                <div class="stage-content">
+                  <div class="stage-title">文本列多规则链式脱敏 <span class="tag muted" id="stage3Tag">等待中</span></div>
+                  <div class="stage-desc">高置信度规则先行 → 低置信度规则 → 熔断保护 → 姓名二次扫描</div>
+                  <div class="rule-chips" id="stage3Chips">
+                    <span class="rule-chip"><span class="rc-dot"></span>身份证</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>手机号</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>车牌</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>证件号</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>社保号</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>姓名字典</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>关键词姓名</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>称谓</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>地址</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>熔断保护</span>
+                    <span class="rule-chip"><span class="rc-dot"></span>二次扫描</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flow-stage stage-scan">
+                <div class="stage-ic"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,40V80a8,8,0,0,1-8,8H176a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></svg></div>
+                <div class="stage-content">
+                  <div class="stage-title">完整性扫描 <span class="tag muted" id="stage4Tag">等待中</span></div>
+                  <div class="stage-desc">扫描所有参与脱敏列，检测残留身份证号和手机号</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4: 预览与审计 -->
+      <section data-state="step4">
+        <div class="kpis">
+          <div class="kpi">
+            <div class="k"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z"/></svg>处理行数</div>
+            <div class="v"><span class="num" id="kpiRows">0</span><em>行</em></div>
+            <div class="sub">全部处理完成</div>
+          </div>
+          <div class="kpi ok">
+            <div class="k"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg>脱敏命中</div>
+            <div class="v"><span class="num" id="kpiHits">0</span><em>处</em></div>
+            <div class="sub">平均每行 <b class="num" id="kpiAvg">0</b> 处</div>
+          </div>
+          <div class="kpi warn">
+            <div class="k"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></svg>完整性扫描</div>
+            <div class="v"><span class="num" id="kpiScan">—</span></div>
+            <div class="sub" id="kpiScanSub">等待结果</div>
+          </div>
+          <div class="kpi">
+            <div class="k"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM136,80v46.34l32.49,18.76a8,8,0,0,1-8,13.8l-36.49-21.05A8,8,0,0,1,120,140V80a8,8,0,0,1,16,0Z"/></svg>处理耗时</div>
+            <div class="v"><span class="num" id="kpiTime">0</span><em>ms</em></div>
+            <div class="sub">含完整性扫描</div>
+          </div>
+        </div>
+
+        <!-- 完整性扫描疑似项 -->
+        <div id="scanPanelContainer"></div>
+
+        <div class="panel">
+          <div class="tabs">
+            <div class="tab active" data-tab="audit" onclick="switchTab('audit')">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M200,32H163.74a47.92,47.92,0,0,0-71.48,0H56A16,16,0,0,0,40,48V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V48A16,16,0,0,0,200,32Zm-72,0a32,32,0,0,1,32,32H96A32,32,0,0,1,128,32Zm72,184H56V48H82.75A47.93,47.93,0,0,0,80,64v8a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V64a47.93,47.93,0,0,0-2.75-16H200Z"/></svg>
+              审计日志
+              <span class="tab-count" id="tabAuditCount">0</span>
+            </div>
+            <div class="tab" data-tab="preview" onclick="switchTab('preview')">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg>
+              数据预览
+              <span class="tab-count" id="tabPreviewCount">10</span>
+            </div>
+            <div class="tab" data-tab="rules" onclick="switchTab('rules')">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM64,128a12,12,0,1,1,12,12A12,12,0,0,1,64,128Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,116,128Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,168,128Z"/></svg>
+              规则命中分布
+            </div>
+          </div>
+
+          <!-- 数据预览 -->
+          <div id="tab-preview" class="hidden">
+            <div style="padding:12px 20px;font-size:12px;color:var(--muted);display:flex;gap:16px;align-items:center">
+              <span><span style="color:var(--bad);text-decoration:line-through">红色删除线</span> = 脱敏前</span>
+              <span><span style="color:var(--ok-ink);font-weight:600">绿色</span> = 脱敏后</span>
+              <span style="margin-left:auto">仅显示有变化的列 · 预览前 10 行</span>
+            </div>
+            <div style="padding:0 20px 20px">
+              <div class="table-wrap">
+                <table class="diff-table" id="previewTable"></table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 审计日志 -->
+          <div id="tab-audit">
+            <div class="audit-layout">
+              <div class="audit-sidebar">
+                <div class="as-title">按规则筛选</div>
+                <div id="ruleFilterList"></div>
+              </div>
+              <div class="audit-list" id="auditList"></div>
+            </div>
+          </div>
+
+          <!-- 规则命中分布 -->
+          <div id="tab-rules" class="hidden">
+            <div style="padding:20px">
+              <div class="hit-bars" id="hitBars"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-bar">
+          <button class="btn btn-outline" onclick="goStep(2)">返回修改配置</button>
+          <span class="sp"></span>
+          <button class="btn btn-success btn-lg" onclick="goStep(5)">
+            <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg>
+            下一步：下载结果
+          </button>
+        </div>
+      </section>
+
+      <!-- Step 5: 下载 -->
+      <section data-state="step5">
+        <div class="panel">
+          <div class="download-hero">
+            <div class="dh-icon"><svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg></div>
+            <div class="dh-title">脱敏处理完成</div>
+            <div class="dh-desc">文件已准备就绪，可下载脱敏后的 Excel 文件</div>
+            <div class="download-summary">
+              <div class="ds-item"><div class="ds-v num" id="dlRows">0</div><div class="ds-l">处理行数</div></div>
+              <div class="ds-item"><div class="ds-v num" id="dlHits">0</div><div class="ds-l">脱敏命中</div></div>
+              <div class="ds-item"><div class="ds-v num" id="dlRisk">0</div><div class="ds-l">残留风险</div></div>
+            </div>
+            <button class="btn btn-success btn-lg" onclick="downloadFile()">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></svg>
+              下载脱敏后文件
+            </button>
+            <div style="margin-top:14px;font-size:12px;color:var(--muted)">
+              文件名：<span class="mono" id="dlFilename">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="action-bar" style="justify-content:center;border-top:0;padding-top:0">
+          <button class="btn btn-outline" onclick="resetAll()">
+            <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></svg>
+            处理新文件
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- 保存模板弹窗 -->
+<div class="scrim" id="scrim"></div>
+<div class="modal" id="saveTemplateModal">
+  <h3>保存为模板</h3>
+  <p class="modal-desc">将当前列映射配置保存为模板，下次可一键应用</p>
+  <input type="text" id="templateNameInput" placeholder="输入模板名称，如：兴宾区12345工单">
+  <div class="acts">
+    <button class="btn btn-outline" onclick="closeSaveTemplateModal()">取消</button>
+    <button class="btn btn-primary" onclick="saveTemplate()">保存</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg>
+  <span id="toastText">操作成功</span>
+</div>
+
+<script>
+// ══ 常量与状态 ══
+const TYPE_OPTIONS = [
+  {value:'skip', label:'跳过', cls:'cb-skip'},
+  {value:'name', label:'姓名', cls:'cb-name'},
+  {value:'phone', label:'电话', cls:'cb-phone'},
+  {value:'idcard', label:'身份证', cls:'cb-id'},
+  {value:'address', label:'地址', cls:'cb-addr'},
+  {value:'text', label:'文本', cls:'cb-text'},
+];
+
+const RULE_LABELS = {
+  'structured_name': '姓名字段脱敏',
+  'structured_phone': '电话字段脱敏',
+  'structured_id_card': '身份证字段脱敏',
+  'id_card': '身份证号脱敏',
+  'phone': '手机号脱敏',
+  'name_dict': '姓名字典查找',
+  'name_keyword': '关键词姓名脱敏',
+  'salutation': '称谓脱敏',
+  'address': '地址脱敏',
+  'plate': '车牌号脱敏',
+  'certificate': '其他证件号',
+  'social_security': '社保编号',
+  'over_mask_fuse': '过度脱敏熔断',
+  'name_second_pass': '姓名二次扫描',
+};
+
+const RULE_COLORS = {
+  'structured_name': '#6398D8',
+  'structured_phone': '#6398D8',
+  'structured_id_card': '#6398D8',
+  'id_card': '#6398D8',
+  'phone': '#6398D8',
+  'name_dict': '#6398D8',
+  'name_keyword': '#6398D8',
+  'salutation': '#6398D8',
+  'address': '#6398D8',
+  'plate': '#6398D8',
+  'certificate': '#6398D8',
+  'social_security': '#6398D8',
+  'over_mask_fuse': '#6398D8',
+  'name_second_pass': '#6398D8',
+};
+
+let currentStep = 1;
+let currentJobId = null;
+let headers = [];
+let sampleRow = {};
+let columnTypes = {};
+let detectedConfig = null;
+let scanWarnings = [];
+let activeRuleFilter = 'all';
+let selectedSus = new Set();
+let lastResult = null;
+let totalRows = 0;
+
+// ══ 步骤导航 ══
+function goStep(n) {
+  if (n < 1 || n > 5) return;
+  // 不允许跳到未完成的后续步骤
+  if (n > currentStep && n > 2 && !currentJobId) return;
+  currentStep = n;
+  document.querySelectorAll('.step-item').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (s < n) el.classList.add('done');
+    else if (s === n) el.classList.add('active');
+    const numEl = el.querySelector('.step-num');
+    if (s < n) {
+      numEl.innerHTML = '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg>';
+    } else {
+      numEl.textContent = s;
+    }
+  });
+  document.querySelectorAll('[data-state]').forEach(el => {
+    el.classList.toggle('on', el.dataset.state === 'step' + n);
+  });
+  const titles = ['上传工单文件', '列映射配置', '脱敏执行中', '预览与审计', '下载结果'];
+  document.getElementById('pageTitle').textContent = titles[n-1];
+}
+
+// ══ 上传 ══
+document.getElementById('uploadZone').addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.currentTarget.classList.add('dragover');
+});
+document.getElementById('uploadZone').addEventListener('dragleave', (e) => {
+  e.currentTarget.classList.remove('dragover');
+});
+document.getElementById('uploadZone').addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+});
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  uploadFile(file);
+}
+
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  setUploading(true);
+
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.detail || '上传失败', true); return; }
+
+    currentJobId = data.job_id;
+    headers = data.headers;
+    sampleRow = data.sample_row || {};
+    detectedConfig = data.detected_config;
+    totalRows = data.total_rows;
+
+    // 初始化列类型
+    columnTypes = {};
+    headers.forEach(h => { columnTypes[h] = ['skip']; });
+    (detectedConfig.name_columns || []).forEach(h => setColType(h, 'name', true));
+    (detectedConfig.phone_columns || []).forEach(h => setColType(h, 'phone', true));
+    (detectedConfig.id_card_columns || []).forEach(h => setColType(h, 'idcard', true));
+    (detectedConfig.address_columns || []).forEach(h => setColType(h, 'address', true));
+    (detectedConfig.text_columns || []).forEach(h => setColType(h, 'text', true));
+
+    // 显示文件卡片
+    document.getElementById('fileName').textContent = data.filename;
+    document.getElementById('fileTime').textContent = new Date().toLocaleString('zh-CN');
+    document.getElementById('statRows').textContent = data.total_rows.toLocaleString();
+    document.getElementById('statCols').textContent = data.total_columns;
+    const sizeKB = (file.size / 1024).toFixed(1);
+    document.getElementById('statSize').textContent = sizeKB > 1024 ? (sizeKB/1024).toFixed(1) + ' MB' : sizeKB + ' KB';
+    document.getElementById('jobIdDisplay').textContent = data.job_id;
+    document.getElementById('colMeta').textContent = `系统已自动识别 ${data.total_columns} 列`;
+
+    document.getElementById('fileCard').classList.remove('hidden');
+    document.getElementById('uploadZone').style.display = 'none';
+
+    await loadTemplates();
+    renderColumnTable();
+    showToast('文件上传成功');
+  } catch (err) {
+    showToast('上传失败: ' + err.message, true);
+  } finally {
+    setUploading(false);
+  }
+}
+
+function setUploading(on) {
+  const state = document.getElementById('uploadingState');
+  const icon = document.querySelector('.upload-zone .up-icon');
+  const text = document.querySelector('.upload-zone .up-text');
+  const hint = document.querySelector('.upload-zone .up-hint');
+  const formats = document.querySelector('.upload-zone .up-formats');
+  if (!state) return;
+  state.classList.toggle('hidden', !on);
+  if (icon) icon.style.display = on ? 'none' : '';
+  if (text) text.style.display = on ? 'none' : '';
+  if (hint) hint.style.display = on ? 'none' : '';
+  if (formats) formats.style.display = on ? 'none' : '';
+}
+
+// ══ 列配置 ══
+function setColType(col, type, on) {
+  if (!columnTypes[col]) columnTypes[col] = ['skip'];
+  let arr = columnTypes[col];
+  if (on) {
+    if (type === 'skip') { arr = ['skip']; }
+    else {
+      arr = arr.filter(t => t !== 'skip');
+      if (!arr.includes(type)) arr.push(type);
+    }
+  } else {
+    arr = arr.filter(t => t !== type);
+    if (arr.length === 0) arr = ['skip'];
+  }
+  columnTypes[col] = arr;
+}
+
+function toggleColumnType(col, type, checked) {
+  setColType(col, type, checked);
+  renderColumnTable();
+}
+
+function renderColumnTable() {
+  const tbody = document.getElementById('colTableBody');
+  tbody.innerHTML = '';
+  headers.forEach(h => {
+    const tr = document.createElement('tr');
+    const types = columnTypes[h] || ['skip'];
+    const sample = sampleRow[h] || '';
+    let cbHtml = '';
+    TYPE_OPTIONS.forEach(t => {
+      const checked = types.includes(t.value);
+      cbHtml += `<label class="${t.cls}"><input type="checkbox" value="${t.value}" ${checked?'checked':''} onchange="toggleColumnType('${escapeJs(h)}','${t.value}',this.checked)">${t.label}</label>`;
+    });
+    tr.innerHTML = `<td class="col-name">${escapeHtml(h)}</td><td class="col-sample" title="${escapeHtml(sample)}">${escapeHtml(sample)||'<span style="color:#ccc">（空）</span>'}</td><td><div class="col-types">${cbHtml}</div></td>`;
+    tbody.appendChild(tr);
+  });
+  updateColSummary();
+}
+
+function updateColSummary() {
+  const counts = {skip:0,name:0,phone:0,idcard:0,address:0,text:0};
+  headers.forEach(h => { (columnTypes[h]||['skip']).forEach(t => { counts[t]++; }); });
+  document.getElementById('colSummary').innerHTML = `
+    <span class="cs-item cs-skip"><span class="cs-dot"></span>跳过: ${counts.skip}</span>
+    <span class="cs-item cs-name"><span class="cs-dot"></span>姓名: ${counts.name}</span>
+    <span class="cs-item cs-phone"><span class="cs-dot"></span>电话: ${counts.phone}</span>
+    <span class="cs-item cs-id"><span class="cs-dot"></span>身份证: ${counts.idcard}</span>
+    <span class="cs-item cs-addr"><span class="cs-dot"></span>地址: ${counts.address}</span>
+    <span class="cs-item cs-text"><span class="cs-dot"></span>文本: ${counts.text}</span>`;
+}
+
+function resetToAutoDetect() {
+  if (!detectedConfig) return;
+  headers.forEach(h => { columnTypes[h] = ['skip']; });
+  (detectedConfig.name_columns || []).forEach(h => setColType(h, 'name', true));
+  (detectedConfig.phone_columns || []).forEach(h => setColType(h, 'phone', true));
+  (detectedConfig.id_card_columns || []).forEach(h => setColType(h, 'idcard', true));
+  (detectedConfig.address_columns || []).forEach(h => setColType(h, 'address', true));
+  (detectedConfig.text_columns || []).forEach(h => setColType(h, 'text', true));
+  renderColumnTable();
+  document.getElementById('templateHint').textContent = '已恢复自动检测';
+  showToast('已恢复自动检测配置');
+}
+
+function buildConfigFromTypes() {
+  const config = { name_columns: [], phone_columns: [], id_card_columns: [], address_columns: [], text_columns: [] };
+  headers.forEach(h => {
+    const types = columnTypes[h] || ['skip'];
+    if (types.includes('name')) config.name_columns.push(h);
+    if (types.includes('phone')) config.phone_columns.push(h);
+    if (types.includes('idcard')) config.id_card_columns.push(h);
+    if (types.includes('address')) config.address_columns.push(h);
+    if (types.includes('text')) config.text_columns.push(h);
+  });
+  return config;
+}
+
+// ══ 模板 ══
+async function loadTemplates() {
+  try {
+    const res = await fetch('/api/templates');
+    const data = await res.json();
+    const select = document.getElementById('templateSelect');
+    select.innerHTML = '<option value="">— 选择其他脱敏模板 —</option>';
+    // 内置默认模板
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '__auto__';
+    defaultOpt.textContent = '12345工单(默认)';
+    defaultOpt.dataset.config = '';
+    select.appendChild(defaultOpt);
+    // 用户保存的模板
+    data.templates.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      opt.dataset.config = JSON.stringify(t.columns);
+      select.appendChild(opt);
+    });
+  } catch (e) { /* ignore */ }
+}
+
+function applyTemplate(templateId) {
+  if (!templateId) return;
+  if (templateId === '__auto__') {
+    resetToAutoDetect();
+    document.getElementById('templateHint').textContent = '已应用默认模板';
+    showToast('已应用默认模板');
+    return;
+  }
+  const opt = document.querySelector(`#templateSelect option[value="${templateId}"]`);
+  if (!opt) return;
+  const cols = JSON.parse(opt.dataset.config);
+  headers.forEach(h => { columnTypes[h] = ['skip']; });
+  (cols.name_columns || []).forEach(h => { if (headers.includes(h)) setColType(h, 'name', true); });
+  (cols.phone_columns || []).forEach(h => { if (headers.includes(h)) setColType(h, 'phone', true); });
+  (cols.id_card_columns || []).forEach(h => { if (headers.includes(h)) setColType(h, 'idcard', true); });
+  (cols.address_columns || []).forEach(h => { if (headers.includes(h)) setColType(h, 'address', true); });
+  (cols.text_columns || []).forEach(h => { if (headers.includes(h)) setColType(h, 'text', true); });
+  renderColumnTable();
+  document.getElementById('templateHint').textContent = `已应用模板：${opt.textContent}`;
+  showToast('模板已应用');
+}
+
+function openSaveTemplateModal() {
+  document.getElementById('templateNameInput').value = '';
+  document.getElementById('scrim').classList.add('on');
+  document.getElementById('saveTemplateModal').classList.add('on');
+  document.getElementById('templateNameInput').focus();
+}
+function closeSaveTemplateModal() {
+  document.getElementById('scrim').classList.remove('on');
+  document.getElementById('saveTemplateModal').classList.remove('on');
+}
+async function saveTemplate() {
+  const name = document.getElementById('templateNameInput').value.trim();
+  if (!name) { showToast('请输入模板名称', true); return; }
+  const config = buildConfigFromTypes();
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('name_columns', config.name_columns.join(','));
+  formData.append('phone_columns', config.phone_columns.join(','));
+  formData.append('id_card_columns', config.id_card_columns.join(','));
+  formData.append('address_columns', config.address_columns.join(','));
+  formData.append('text_columns', config.text_columns.join(','));
+  try {
+    const res = await fetch('/api/templates', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (res.ok) {
+      closeSaveTemplateModal();
+      await loadTemplates();
+      document.getElementById('templateHint').textContent = `模板"${name}"已保存`;
+      showToast(`模板"${name}"已保存`);
+    } else {
+      showToast(data.detail || '保存失败', true);
+    }
+  } catch (e) { showToast('保存失败: ' + e.message, true); }
+}
+
+// ══ 规则开关 ══
+function toggleRule(el) { el.classList.toggle('active'); }
+
+// ══ 脱敏执行 ══
+async function startDesensitize() {
+  goStep(3);
+  resetEngineStages();
+
+  const config = buildConfigFromTypes();
+  const formData = new FormData();
+  formData.append('name_columns', config.name_columns.join(','));
+  formData.append('phone_columns', config.phone_columns.join(','));
+  formData.append('id_card_columns', config.id_card_columns.join(','));
+  formData.append('address_columns', config.address_columns.join(','));
+  formData.append('text_columns', config.text_columns.join(','));
+  document.querySelectorAll('.rule-toggle').forEach(t => {
+    formData.append(t.dataset.rule, t.classList.contains('active'));
+  });
+
+  // 启动模拟进度动画（后端是同步的，做视觉反馈）
+  const startTime = Date.now();
+  let animProgress = 0;
+  const animInterval = setInterval(() => {
+    animProgress += Math.random() * 8 + 3;
+    if (animProgress > 90) animProgress = 90;
+    updateEngineProgress(animProgress);
+  }, 150);
+
+  // 阶段标签动画
+  setTimeout(() => setStageTag(1, 'ok', '已完成'), 300);
+  setTimeout(() => setStageTag(2, 'ok', '已完成'), 600);
+  setTimeout(() => {
+    setStageTag(3, 'warn', '处理中');
+    document.querySelectorAll('#stage3Chips .rule-chip').forEach((c, i) => {
+      setTimeout(() => c.classList.add('done'), i * 80);
+    });
+  }, 900);
+
+  try {
+    const res = await fetch(`/api/desensitize/${currentJobId}`, { method: 'POST', body: formData });
+    const data = await res.json();
+
+    clearInterval(animInterval);
+
+    if (!res.ok) {
+      showToast(data.detail || '脱敏失败', true);
+      goStep(2);
+      return;
+    }
+
+    lastResult = data;
+    scanWarnings = data.scan_warnings || [];
+    totalRows = data.total_rows;
+
+    // 完成动画
+    updateEngineProgress(100);
+    setStageTag(3, 'ok', '已完成');
+    setStageTag(4, 'ok', '已完成');
+    document.getElementById('engineProgressText').textContent = '处理完成';
+    document.getElementById('processedRows').textContent = data.total_rows.toLocaleString();
+    document.getElementById('progressSpinner').classList.add('hidden');
+    document.getElementById('etaText').textContent = `耗时 ${data.duration_ms}ms`;
+
+    setTimeout(() => {
+      goStep(4);
+      renderStep4(data);
+    }, 500);
+  } catch (err) {
+    clearInterval(animInterval);
+    showToast('脱敏失败: ' + err.message, true);
+    goStep(2);
+  }
+}
+
+function resetEngineStages() {
+  for (let i = 1; i <= 4; i++) setStageTag(i, 'muted', '等待中');
+  document.querySelectorAll('#stage3Chips .rule-chip').forEach(c => c.classList.remove('done'));
+  document.getElementById('engineProgressBar').style.width = '0%';
+  document.getElementById('engineProgressText').textContent = '准备中...';
+  document.getElementById('processedRows').textContent = '0';
+  document.getElementById('progressSpinner').classList.remove('hidden');
+  document.getElementById('etaText').textContent = '0%';
+}
+
+function setStageTag(n, cls, text) {
+  const tag = document.getElementById('stage' + n + 'Tag');
+  if (tag) { tag.className = 'tag ' + cls; tag.textContent = text; }
+}
+
+function updateEngineProgress(pct) {
+  document.getElementById('engineProgressBar').style.width = pct + '%';
+  const r = Math.floor(totalRows * pct / 100);
+  document.getElementById('engineProgressText').textContent = `处理第 ${r.toLocaleString()} / ${totalRows.toLocaleString()} 行`;
+  document.getElementById('processedRows').textContent = r.toLocaleString();
+  document.getElementById('etaText').textContent = Math.round(pct) + '%';
+}
+
+// ══ Step4 渲染 ══
+function renderStep4(data) {
+  // KPI
+  document.getElementById('kpiRows').textContent = data.total_rows.toLocaleString();
+  document.getElementById('kpiHits').textContent = data.total_hits.toLocaleString();
+  document.getElementById('kpiAvg').textContent = (data.total_hits / data.total_rows).toFixed(2);
+  document.getElementById('kpiTime').textContent = data.duration_ms;
+  if (scanWarnings.length === 0) {
+    document.getElementById('kpiScan').textContent = '通过';
+    document.getElementById('kpiScanSub').innerHTML = '<span class="tag ok">未检测到残留</span>';
+  } else {
+    document.getElementById('kpiScan').textContent = scanWarnings.length + ' 条';
+    document.getElementById('kpiScanSub').innerHTML = '<span class="tag warn">需人工复核</span>';
+  }
+
+  // 下载页数据
+  document.getElementById('dlRows').textContent = data.total_rows.toLocaleString();
+  document.getElementById('dlHits').textContent = data.total_hits.toLocaleString();
+  document.getElementById('dlRisk').textContent = scanWarnings.length;
+
+  renderScanPanel();
+  loadPreview();
+  loadAudit();
+  renderHitBars(data.hits_by_rule);
+  document.getElementById('tabAuditCount').textContent = data.audit_count || 0;
+}
+
+// ══ 疑似项 ══
+function renderScanPanel() {
+  const container = document.getElementById('scanPanelContainer');
+  if (scanWarnings.length === 0) {
+    container.innerHTML = `
+      <div class="scan-panel">
+        <div class="scan-header passed">
+          <svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></svg>
+          完整性扫描通过 — 未检测到残留 PII
+          <span class="sp"></span><span class="scan-count">全部已处理</span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const typeLabel = { id_card: '身份证号', phone: '手机号', certificate: '证件号', social_security: '社保号' };
+  let itemsHtml = '';
+  scanWarnings.forEach((w, idx) => {
+    itemsHtml += `
+      <div class="sus-item">
+        <input type="checkbox" data-idx="${idx}" class="sus-check" ${selectedSus.has(idx)?'checked':''} onchange="toggleSus(${idx},this.checked)">
+        <div class="sus-meta">
+          <div class="sus-where">第${w.row_no}行 · ${escapeHtml(w.column)}</div>
+          <div class="sus-type"><span class="st-dot"></span>${typeLabel[w.type]||w.type}</div>
+        </div>
+        <div class="sus-frag">${escapeHtml(w.fragment || '')}</div>
+        <div class="sus-ctx">…${escapeHtml(w.context || '')}…</div>
+      </div>`;
+  });
+
+  container.innerHTML = `
+    <div class="scan-panel">
+      <div class="scan-header warning">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></svg>
+        完整性扫描发现 ${scanWarnings.length} 条疑似敏感信息残留
+        <span class="sp"></span>
+        <span class="scan-count">请人工确认后勾选修复</span>
+      </div>
+      <div class="scan-toolbar">
+        <label><input type="checkbox" id="checkAllSus" onchange="toggleCheckAllSus(this.checked)"> 全选</label>
+        <button class="btn btn-warn btn-sm" onclick="fixSelectedSus()">
+          <svg viewBox="0 0 256 256" fill="currentColor"><path d="M219.31,80,80,219.31a16,16,0,0,1-22.62,0L36.68,198.63a16,16,0,0,1,0-22.63L176,36.69a16,16,0,0,1,22.63,0l20.68,20.68A16,16,0,0,1,219.31,80Zm-54.63,32L144,91.31l-96,96L68.68,208ZM208,68.69,187.31,48l-32,32L176,100.69Z"/></svg>
+          一键脱敏选中项
+        </button>
+        <span style="font-size:12px;color:var(--muted)" id="fixStatus">未勾选的项将保留原文</span>
+      </div>
+      <div class="scan-list">${itemsHtml}</div>
+    </div>`;
+}
+
+function toggleSus(idx, checked) {
+  if (checked) selectedSus.add(idx); else selectedSus.delete(idx);
+}
+
+function toggleCheckAllSus(checked) {
+  document.querySelectorAll('.sus-check').forEach(cb => { cb.checked = checked; toggleSus(parseInt(cb.dataset.idx), checked); });
+}
+
+async function fixSelectedSus() {
+  const items = [];
+  document.querySelectorAll('.sus-check').forEach(cb => {
+    if (cb.checked) {
+      const w = scanWarnings[parseInt(cb.dataset.idx)];
+      items.push({ row: w.row, column: w.column, type: w.type });
+    }
+  });
+  if (items.length === 0) { showToast('请先勾选需要修复的项', true); return; }
+
+  document.getElementById('fixStatus').textContent = `正在修复 ${items.length} 项...`;
+  try {
+    const res = await fetch(`/api/fix/${currentJobId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.detail || '处理失败', true); return; }
+
+    selectedSus.clear();
+    scanWarnings = data.scan_warnings || [];
+    document.getElementById('fixStatus').textContent = `已修复 ${data.fixed} 处，剩余 ${scanWarnings.length} 条待确认`;
+    document.getElementById('kpiScan').textContent = scanWarnings.length === 0 ? '通过' : scanWarnings.length + ' 条';
+    document.getElementById('kpiScanSub').innerHTML = scanWarnings.length === 0
+      ? '<span class="tag ok">未检测到残留</span>'
+      : '<span class="tag warn">需人工复核</span>';
+    document.getElementById('dlRisk').textContent = scanWarnings.length;
+    renderScanPanel();
+    loadPreview();
+    loadAudit();
+    showToast(`已修复 ${data.fixed} 处敏感信息`);
+  } catch (e) {
+    showToast('处理失败: ' + e.message, true);
+  }
+}
+
+// ══ 数据预览 ══
+async function loadPreview() {
+  try {
+    const res = await fetch(`/api/preview/${currentJobId}?limit=10`);
+    const data = await res.json();
+    const allCols = data.diff_columns || [];
+    document.getElementById('tabPreviewCount').textContent = data.rows ? data.rows.length : 0;
+
+    let html = `<thead><tr><th style="width:50px">#</th>${allCols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>`;
+    (data.rows || []).forEach(row => {
+      html += `<tr><td class="row-idx">${row.index + 1}</td>`;
+      allCols.forEach(col => {
+        const oldVal = row.original[col] != null ? String(row.original[col]) : '';
+        const newVal = row.processed[col] != null ? String(row.processed[col]) : '';
+        if (oldVal !== newVal) {
+          html += `<td><span class="diff-old">${escapeHtml(oldVal)}</span><br><span class="diff-new">${escapeHtml(newVal)}</span></td>`;
+        } else {
+          html += `<td>${escapeHtml(newVal)}</td>`;
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    document.getElementById('previewTable').innerHTML = html || '<tr><td colspan="100%" style="text-align:center;padding:40px;color:var(--muted)">暂无数据</td></tr>';
+  } catch (e) {
+    document.getElementById('previewTable').innerHTML = '<tr><td colspan="100%" style="text-align:center;padding:40px;color:var(--muted)">预览加载失败</td></tr>';
+  }
+}
+
+// ══ Tab 切换 ══
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tab-preview').classList.toggle('hidden', tab !== 'preview');
+  document.getElementById('tab-audit').classList.toggle('hidden', tab !== 'audit');
+  document.getElementById('tab-rules').classList.toggle('hidden', tab !== 'rules');
+}
+
+// ══ 审计日志 ══
+async function loadAudit() {
+  try {
+    const res = await fetch(`/api/audit/${currentJobId}?limit=200`);
+    const data = await res.json();
+    renderRuleFilter(data.hits_by_rule);
+    renderAuditList(data.entries || []);
+  } catch (e) {
+    document.getElementById('auditList').innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px">审计日志加载失败</div>';
+  }
+}
+
+function renderRuleFilter(hitsByRule) {
+  const list = document.getElementById('ruleFilterList');
+  const total = Object.values(hitsByRule || {}).reduce((a, b) => a + b, 0);
+  let html = `<div class="rule-filter-item ${activeRuleFilter==='all'?'active':''}" onclick="filterAudit('all')">
+    <span class="rf-dot" style="background:var(--accent)"></span>全部规则
+    <span class="rf-count num">${total.toLocaleString()}</span></div>`;
+  for (const [ruleId, count] of Object.entries(hitsByRule || {})) {
+    const color = RULE_COLORS[ruleId] || 'var(--muted)';
+    html += `<div class="rule-filter-item ${activeRuleFilter===ruleId?'active':''}" onclick="filterAudit('${ruleId}')">
+      <span class="rf-dot" style="background:${color}"></span>${RULE_LABELS[ruleId] || ruleId}
+      <span class="rf-count num">${count.toLocaleString()}</span></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function filterAudit(ruleId) {
+  activeRuleFilter = ruleId;
+  try {
+    const url = ruleId === 'all'
+      ? `/api/audit/${currentJobId}?limit=200`
+      : `/api/audit/${currentJobId}?rule_id=${ruleId}&limit=200`;
+    const res = await fetch(url);
+    const data = await res.json();
+    renderRuleFilter(data.hits_by_rule);
+    renderAuditList(data.entries || []);
+  } catch (e) { /* ignore */ }
+}
+
+function renderAuditList(entries) {
+  const list = document.getElementById('auditList');
+  if (entries.length === 0) {
+    list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px">该规则暂无审计记录</div>';
+    return;
+  }
+  list.innerHTML = entries.map(e => {
+    const color = RULE_COLORS[e.rule_id] || 'var(--muted)';
+    const details = (e.hit_details || []).map(d =>
+      `<span class="pii-old">${escapeHtml(d.original)}</span><span class="pii-arrow">→</span><span class="pii-new">${escapeHtml(d.masked)}</span>`
+    ).join(' ');
+    return `<div class="audit-entry">
+      <div class="audit-meta">
+        <span class="am-row">第 ${e.row_index + 1} 行</span>
+        <span class="am-col">${escapeHtml(e.column_name)}</span>
+        <span class="am-rule" style="background:${color}1a;color:${color}">${e.rule_name || RULE_LABELS[e.rule_id] || e.rule_id}</span>
+      </div>
+      <div class="audit-detail">${details}<span style="margin-left:auto;font-size:11px;color:var(--muted)">命中 ${e.hit_count} 处</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ══ 规则命中分布 ══
+function renderHitBars(hitsByRule) {
+  const bars = document.getElementById('hitBars');
+  const entries = Object.entries(hitsByRule || {}).filter(([_, v]) => v > 0);
+  if (entries.length === 0) {
+    bars.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">暂无命中数据</div>';
+    return;
+  }
+  const max = Math.max(...entries.map(([_, v]) => v));
+  bars.innerHTML = entries.map(([ruleId, count]) => {
+    const pct = (count / max * 100).toFixed(1);
+    const color = RULE_COLORS[ruleId] || 'var(--muted)';
+    return `<div class="hit-bar-row">
+      <span class="hbr-label">${RULE_LABELS[ruleId] || ruleId}</span>
+      <div class="hbr-track"><div class="hbr-fill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="hbr-val num">${count.toLocaleString()}</span>
+    </div>`;
+  }).join('');
+}
+
+// ══ 下载 ══
+function downloadFile() {
+  if (!currentJobId) return;
+  const filename = document.getElementById('fileName').textContent || 'output';
+  const baseName = filename.replace(/\.(xlsx|xls)$/i, '');
+  document.getElementById('dlFilename').textContent = `${baseName}_脱敏后.xlsx`;
+
+  // 直接触发浏览器下载
+  window.location.href = `/api/download/${currentJobId}`;
+  showToast('浏览器已开始下载');
+}
+
+
+// ══ 重置 ══
+function resetAll() {
+  currentJobId = null;
+  scanWarnings = [];
+  selectedSus.clear();
+  lastResult = null;
+  totalRows = 0;
+  activeRuleFilter = 'all';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileCard').classList.add('hidden');
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('jobIdDisplay').textContent = '—';
+  document.getElementById('templateHint').textContent = '';
+  goStep(1);
+  showToast('已重置，可重新上传文件');
+}
+
+// ══ Toast ══
+function showToast(text, isError) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastText').textContent = text;
+  toast.classList.toggle('error', !!isError);
+  toast.classList.add('on');
+  setTimeout(() => toast.classList.remove('on'), 2500);
+}
+
+// ══ 工具函数 ══
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = String(text || '');
+  return div.innerHTML;
+}
+function escapeJs(text) {
+  return String(text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+// ══ 初始化 ══
+document.getElementById('scrim').onclick = closeSaveTemplateModal;
+</script>
+</body>
+</html>
